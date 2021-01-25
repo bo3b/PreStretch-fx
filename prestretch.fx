@@ -38,10 +38,12 @@ sampler SamplerRight
 // Some gotchas here.
 //  The position output is in game dimensions Buffer_Width Buffer_Height
 //  The texcoord output is in uv format 0..1
+//  SV_Position output is a required parameter, otherwise the shader fails.
 
 
 // Vertex shader generating a triangle covering the entire screen
-void PostProcessVS(in uint id : SV_VertexID, out float4 position : SV_Position, out float2 texcoord : TEXCOORD)
+void VS_PostProcess(in uint id : SV_VertexID, 
+				   out float2 texcoord : TEXCOORD, out float4 position : SV_Position)
 {
 	texcoord.x = (id == 2) ? 2.0 : 0.0;
 	texcoord.y = (id == 1) ? 2.0 : 0.0;
@@ -53,11 +55,11 @@ Pixel Shaders
 =============================================================================*/
 
 // Gotchas:
-//  The input parameters must exactly match the VS inputs.  Even if unused,
-//  they must be there, or it silently fails.
+//  The input parameters must exactly match the order of the VS outputs so that 
+//  the HLSL registers will match.
 //  The SV_Targets must start at SV_Target0, or are silently ignored.
 
-void PS_CopyLR(in float4 vpos : SV_Position, in float2 texcoord : TEXCOORD, 
+void PS_CopyLR(in float2 texcoord : TEXCOORD, 
 			   out float4 Left : SV_Target0, out float4 Right : SV_Target1)
 {
 	// float2 stretchXY;
@@ -68,20 +70,6 @@ void PS_CopyLR(in float4 vpos : SV_Position, in float2 texcoord : TEXCOORD,
 	Right = tex2D(sBackBuffer, texcoord);
 }
 
-float4 PS_LR_Out(in float2 texcoord : TEXCOORD) : SV_Target
-{
-	// float2 stretchXY;
-	// stretchXY.x = texcoord.x / 2;
-	// stretchXY.y = texcoord.y;
-	
-	// return tex2D(ReShade::BackBuffer, stretchXY);
-
-	if (texcoord.x > 0.5)
-		return tex2D(SamplerRight, texcoord);
-	else
-		return tex2D(SamplerLeft, texcoord);
-}
-
 /*=============================================================================
 	Techniques
 =============================================================================*/
@@ -90,15 +78,9 @@ technique Prestretch <ui_tooltip = "Stretch to double width."; >
 {
 	pass StretchPass
 	{
-		VertexShader = PostProcessVS;
+		VertexShader = VS_PostProcess;
 		PixelShader = PS_CopyLR;
 		RenderTarget0 = LeftTex;
 		RenderTarget1 = RightTex;
 	}
-
-	// pass BackBuffer
-	// {
-		// VertexShader = PostProcessVS;
-		// PixelShader = PS_LR_Out;
-	// }
 }
