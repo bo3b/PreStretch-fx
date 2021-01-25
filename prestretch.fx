@@ -1,12 +1,9 @@
 // Prestretch.fx
 //
-// Reshade.fx shader to stretch the backbuffer across a double width texture.
+// Reshade.fx shader to stretch the backbuffer across two destination textures.
 
 
 #include "ReShade.fxh"
-
-namespace prestretch
-{
 
 /*=============================================================================
 	Textures, Samplers, Globals
@@ -49,13 +46,13 @@ void PostProcessVS(in uint id : SV_VertexID, out float4 position : SV_Position, 
 }
 
 /*=============================================================================
-	Pixel Shaders
+Pixel Shaders
 =============================================================================*/
 
 // Gotchas:
 //  The input parameters must exactly match the VS inputs.  Even if unused,
 //  they must be there, or it silently fails.
-//  The SV_Targets must start at 0, or are silently ignored.
+//  The SV_Targets must start at SV_Target0, or are silently ignored.
 
 void PS_CopyLR(in float4 vpos : SV_Position, in float2 texcoord : TEXCOORD, 
 			   out float4 Left : SV_Target0, out float4 Right : SV_Target1)
@@ -117,6 +114,4 @@ technique Prestretch <ui_tooltip = "Stretch to double width."; >
 		// VertexShader = PostProcessVS;
 		// PixelShader = PS_LR_Out;
 	// }
-}
-
 }
