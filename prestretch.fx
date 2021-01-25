@@ -3,14 +3,18 @@
 // Reshade.fx shader to stretch the backbuffer across two destination textures.
 
 
-#include "ReShade.fxh"
-
 /*=============================================================================
 	Textures, Samplers, Globals
 =============================================================================*/
 
-texture LeftTex  { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; Format = RGBA8; };
+texture BackBufferTex : COLOR;
+sampler sBackBuffer { Texture = BackBufferTex; };
 
+texture DepthBufferTex : DEPTH;
+sampler sDepthBuffer { Texture = DepthBufferTex; };
+
+
+texture LeftTex  { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; Format = RGBA8; };
 sampler SamplerLeft
 	{
 		Texture = LeftTex;
@@ -20,7 +24,6 @@ sampler SamplerLeft
 	};
 
 texture RightTex  { Width = BUFFER_WIDTH; Height = BUFFER_HEIGHT; Format = RGBA8; };
-
 sampler SamplerRight
 	{
 		Texture = RightTex;
@@ -61,11 +64,11 @@ void PS_CopyLR(in float4 vpos : SV_Position, in float2 texcoord : TEXCOORD,
 	// stretchXY.x = vpos.x; // / 2;
 	// stretchXY.y = vpos.y;
 	
-	Left = tex2D(ReShade::BackBuffer, texcoord);
-	Right = tex2D(ReShade::BackBuffer, texcoord);
+	Left = tex2D(sBackBuffer, texcoord);
+	Right = tex2D(sBackBuffer, texcoord);
 }
 
-float4 PS_LR_Out(in float4 vpos : SV_Position, in float2 texcoord : TEXCOORD) : SV_Target
+float4 PS_LR_Out(in float2 texcoord : TEXCOORD) : SV_Target
 {
 	// float2 stretchXY;
 	// stretchXY.x = texcoord.x / 2;
@@ -79,35 +82,19 @@ float4 PS_LR_Out(in float4 vpos : SV_Position, in float2 texcoord : TEXCOORD) : 
 		return tex2D(SamplerLeft, texcoord);
 }
 
-void PS_StretchDebug(float4 vpos : SV_Position, float2 texcoord : TEXCOORD, out float4 doubled : SV_Target0)
-{
-	float2 stretchXY;
-	stretchXY.x = texcoord.x;
-	stretchXY.y = texcoord.y;
-	
-	doubled = tex2D(ReShade::BackBuffer, stretchXY);
-}
-
-
 /*=============================================================================
 	Techniques
 =============================================================================*/
 
 technique Prestretch <ui_tooltip = "Stretch to double width."; >
 {
-	pass StretchPassDebug
+	pass StretchPass
 	{
 		VertexShader = PostProcessVS;
-		PixelShader = PS_StretchDebug;
+		PixelShader = PS_CopyLR;
+		RenderTarget0 = LeftTex;
+		RenderTarget1 = RightTex;
 	}
-
-	// pass StretchPass
-	// {
-		// VertexShader = PostProcessVS;
-		// PixelShader = PS_CopyLR;
-		// RenderTarget0 = LeftTex;
-		// RenderTarget1 = RightTex;
-	// }
 
 	// pass BackBuffer
 	// {
